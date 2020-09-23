@@ -26,6 +26,11 @@ QScriptValue log(QScriptContext *context, QScriptEngine *engine)
 
 QScriptValue wait(QScriptContext *context, QScriptEngine *engine)
 {
+    if (context->argumentCount()!=1) {
+        return context->throwError(QScriptContext::SyntaxError,
+                            "Function wait called without arguments\n"
+                            "  Usage: wait(ms)");
+    }
     ScriptObject* so = qobject_cast<ScriptObject*>(engine->parent());
     int ms = context->argument(0).toUInt32();
     so->waitTimer()->start(ms);
@@ -58,20 +63,10 @@ ScriptObject::ScriptObject(QConsoleWidget *aw) : QObject()
     w = aw;
     iodev_ = w->device();
     iodev_->open(QIODevice::ReadWrite);
+
     connect(iodev_,SIGNAL(readyRead()),this,SLOT(evalCommand()));
     connect(w,SIGNAL(abortEvaluation()),this,SLOT(abortEvaluation()));
 
-    w->writeStdOut(
-                "QConsoleWidget example: qscript console\n"
-                "  interactive qscript interpreter\n\n"
-                "Additional commands:\n"
-                "  - quit() or exit() to leave\n"
-                "  - log(var x) to print x.toString()\n"
-                "  - wait(ms) blocks qscript execution for given ms\n\n"
-                );
-    w->writeStdOut("Enter quit() or exit() to leave\n\n");
-    w->writeStdOut("qs> ");
-    w->setMode(QConsoleWidget::Input);
 }
 
 void ScriptObject::evalCommand()
@@ -110,3 +105,5 @@ void ScriptObject::abortEvaluation()
     waitTimer_->stop();
     e->abortEvaluation();
 }
+
+
