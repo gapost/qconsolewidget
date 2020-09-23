@@ -14,18 +14,19 @@ class ScriptObject : public QObject
 public:
     explicit ScriptObject(QConsoleWidget *w);
 
-    QIODevice* iodev;
-    QTimer* waitTimer;
-
-signals:
+    QTimer* waitTimer() { return waitTimer_; }
+    QIODevice* device() { return iodev_; }
 
 public slots:
     void evalCommand();
     void abortEvaluation();
 
 private:
+    QIODevice* iodev_;
+    QTimer* waitTimer_;
     QConsoleWidget* w;
     QScriptEngine* e;
+    QString multilineCode_;
 };
 
 #endif // SCIPTOBJECT_H

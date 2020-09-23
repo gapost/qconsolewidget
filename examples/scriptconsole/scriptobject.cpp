@@ -20,7 +20,7 @@ QScriptValue log(QScriptContext *context, QScriptEngine *engine)
 {
     ScriptObject* so = qobject_cast<ScriptObject*>(engine->parent());
     QString msg = context->argument(0).toString() + "\n";
-    so->iodev->write(msg.toLatin1());
+    so->device()->write(msg.toLatin1());
     return QScriptValue(QScriptValue::UndefinedValue);
 }
 
@@ -28,11 +28,11 @@ QScriptValue wait(QScriptContext *context, QScriptEngine *engine)
 {
     ScriptObject* so = qobject_cast<ScriptObject*>(engine->parent());
     int ms = context->argument(0).toUInt32();
-    so->waitTimer->start(ms);
+    so->waitTimer()->start(ms);
 
     do
         QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents, 200);
-    while (so->waitTimer->isActive());
+    while (so->waitTimer()->isActive());
 
     return QScriptValue(QScriptValue::UndefinedValue);
 }
@@ -52,47 +52,61 @@ ScriptObject::ScriptObject(QConsoleWidget *aw) : QObject()
     v = e->newFunction(wait);
     e->globalObject().setProperty("wait", v);
 
-    waitTimer = new QTimer(this);
-    waitTimer->setSingleShot(true);
+    waitTimer_ = new QTimer(this);
+    waitTimer_->setSingleShot(true);
 
     w = aw;
-    iodev = w->device();
-    iodev->open(QIODevice::ReadWrite);
-    connect(iodev,SIGNAL(readyRead()),this,SLOT(evalCommand()));
+    iodev_ = w->device();
+    iodev_->open(QIODevice::ReadWrite);
+    connect(iodev_,SIGNAL(readyRead()),this,SLOT(evalCommand()));
     connect(w,SIGNAL(abortEvaluation()),this,SLOT(abortEvaluation()));
 
-    w->writeStdOut("QConsoleWidget example: qscript console\n\n");
+    w->writeStdOut(
+                "QConsoleWidget example: qscript console\n"
+                "  interactive qscript interpreter\n\n"
+                "Additional commands:\n"
+                "  - quit() or exit() to leave\n"
+                "  - log(var x) to print x.toString()\n"
+                "  - wait(ms) blocks qscript execution for given ms\n\n"
+                );
     w->writeStdOut("Enter quit() or exit() to leave\n\n");
-    w->writeStdOut(">> ");
+    w->writeStdOut("qs> ");
     w->setMode(QConsoleWidget::Input);
 }
 
 void ScriptObject::evalCommand()
 {
+    multilineCode_+= iodev_->readAll();
 
-    QByteArray code = iodev->readAll();
-    if (code.endsWith('\n')) code.chop(1);
+    if (!multilineCode_.isEmpty()) {
+        if (e->canEvaluate(multilineCode_)) {
+            QScriptValue ret = e->evaluate(multilineCode_);
+            multilineCode_ = "";
+            QTextStream os(iodev_);
+            if (e->hasUncaughtException()) {
+                iodev_->setCurrentWriteChannel(QConsoleWidget::StandardError);
+                if (!ret.isUndefined()) os << ret.toString();
+                os << endl;
+                os << e->uncaughtExceptionBacktrace().join("\n") << endl;
+                iodev_->setCurrentWriteChannel(QConsoleWidget::StandardOutput);
+            } else if (ret.isValid() && !ret.isUndefined()) os << ret.toString() << endl;
+        } else {
+            // incomplete code
+            w->writeStdOut("....> ");
+            w->setMode(QConsoleWidget::Input);
+            return;
 
-    if (!code.isEmpty()) {
-        QScriptValue ret = e->evaluate(code);
-        QTextStream os(iodev);
-        if (e->hasUncaughtException()) {
-            iodev->setCurrentWriteChannel(QConsoleWidget::StandardError);
-            if (!ret.isUndefined()) os << ret.toString();
-            os << endl;
-            os << e->uncaughtExceptionBacktrace().join("\n") << endl;
-            iodev->setCurrentWriteChannel(QConsoleWidget::StandardOutput);
-        } else if (ret.isValid() && !ret.isUndefined()) os << ret.toString() << endl;
+        }
 
     }
 
-    w->writeStdOut(">> ");
+    w->writeStdOut("qs> ");
     w->setMode(QConsoleWidget::Input);
     return;
 }
 
 void ScriptObject::abortEvaluation()
 {
-    waitTimer->stop();
+    waitTimer_->stop();
     e->abortEvaluation();
 }
