@@ -30,18 +30,18 @@ qint64 QConsoleIODevice::bytesAvailable() const
 */
 bool QConsoleIODevice::waitForReadyRead(int msecs)
 {
-    if (widget_->mode()!=QConsoleWidget::Input)
+    if (!widget_->device()->isOpen() ||  widget_->mode()!=QConsoleWidget::Input)
         return false;
 
-    if (readbuff_.size()) return true;
+    if (bytesAvailable()) return true;
 
     QElapsedTimer stopWatch;
     stopWatch.start();
 
     readyReadEmmited_ = false;
     do
-        QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents,100);
-    while(!(readyReadEmmited_ || stopWatch.hasExpired(msecs)));
+        QCoreApplication::processEvents();
+    while(!(readyReadEmmited_ || stopWatch.hasExpired(msecs) || !widget_->device()->isOpen()));
 
     return readyReadEmmited_;
 
