@@ -1,6 +1,9 @@
 #include "QConsoleIODevice.h"
 #include "QConsoleWidget.h"
 
+#include <QCoreApplication>
+#include <QElapsedTimer>
+
 QConsoleIODevice::QConsoleIODevice(QConsoleWidget *w, QObject *parent)
     : QIODevice(parent), widget_(w),
       readpos_(0), writtenSinceLastEmit_(0), readSinceLastEmit_(0)
@@ -20,6 +23,28 @@ QConsoleIODevice::~QConsoleIODevice()
 qint64 QConsoleIODevice::bytesAvailable() const
 {
     return (qint64)(readbuff_.size() - readpos_);
+}
+
+/*!
+    \reimp
+*/
+bool QConsoleIODevice::waitForReadyRead(int msecs)
+{
+    if (widget_->mode()!=QConsoleWidget::Input)
+        return false;
+
+    if (readbuff_.size()) return true;
+
+    QElapsedTimer stopWatch;
+    stopWatch.start();
+
+    readyReadEmmited_ = false;
+    do
+        QCoreApplication::processEvents(QEventLoop::WaitForMoreEvents,100);
+    while(!(readyReadEmmited_ || stopWatch.hasExpired(msecs)));
+
+    return readyReadEmmited_;
+
 }
 
 /*!
@@ -70,6 +95,7 @@ void QConsoleIODevice::consoleWidgetInput(const QString &in)
     readSinceLastEmit_ += sz;
     if (!signalsBlocked()) {
         emit readyRead();
+        readyReadEmmited_ = true;
         readSinceLastEmit_ = 0;
     }
 }

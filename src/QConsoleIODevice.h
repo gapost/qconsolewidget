@@ -17,6 +17,7 @@ public:
     ~QConsoleIODevice();
 
     qint64 bytesAvailable() const override;
+    bool waitForReadyRead(int msecs) override;
 
 protected:
     qint64 readData(char *data, qint64 maxlen) override;
@@ -28,6 +29,7 @@ private:
     QByteArray readbuff_;
     int readpos_;
     qint64 writtenSinceLastEmit_, readSinceLastEmit_;
+    bool readyReadEmmited_;
 
     void consoleWidgetInput(const QString& in);
 
