@@ -31,21 +31,20 @@ Alternatively you can use a QTextStream to interact with QConsoleWidget:
 ```c++
 QConsoleWidget w;
 w.device()->open(QIODevice::ReadWrite); // open the console's QIODevice
-QTextStream os(w.device());
-os << "Hello World!" << endl; // output goes to the widget
+QTextStream stream(w.device());
+stream << "Hello World!" << endl; // output goes to the widget
 ```
 
-It can also be used with an input stream
+The stream can also be used for input
 
 ```c++
-os << "Enter an integer n = " << flush;
-QTextStream is(w.device());
+stream << "Enter an integer n = " << flush;
 int n;
-w.device()->waitForReadyRead();
-is >> n;
+stream.device()->waitForReadyRead();
+stream >> n;
 ```
-however the above code is not so efficient as it enters a local loop waiting for
-user input. Using the signal/slot mechanism is recommended in this case.
+The call to ```waitForReadyRead()``` enters a local loop waiting for
+the user to enter a command and hit return. 
 
 ## Example
 
