@@ -3,6 +3,8 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QEventLoop>
+#include <QTimer>
 
 QConsoleIODevice::QConsoleIODevice(QConsoleWidget *w, QObject *parent)
     : QIODevice(parent), widget_(w),
@@ -35,14 +37,16 @@ bool QConsoleIODevice::waitForReadyRead(int msecs)
 
     if (bytesAvailable()) return true;
 
-    QElapsedTimer stopWatch;
-    stopWatch.start();
+
+    QEventLoop loop;
+
+    connect(this,SIGNAL(readyRead()),&loop,SLOT(quit()));
+    connect(this,SIGNAL(aboutToClose()),&loop,SLOT(quit()));
+    if (msecs>0)
+        QTimer::singleShot(msecs,&loop,SLOT(quit()));
 
     readyReadEmmited_ = false;
-    do
-        QCoreApplication::processEvents();
-    while(!(readyReadEmmited_ || stopWatch.hasExpired(msecs) || !widget_->device()->isOpen()));
-
+    loop.exec();
     return readyReadEmmited_;
 
 }
