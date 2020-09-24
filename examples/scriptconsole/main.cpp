@@ -1,6 +1,7 @@
 #include "QConsoleWidget.h"
-#include "scriptobject.h"
+#include "scriptsession.h"
 #include <QApplication>
+#include <QTimer>
 
 
 int main(int argc, char *argv[])
@@ -8,7 +9,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
     QConsoleWidget w;
-    ScriptObject qs(&w);
+    ScriptSession qs(&w);
 
     w.setWindowTitle("qscript console");
 #if defined(Q_OS_MAC)
@@ -26,10 +27,11 @@ int main(int argc, char *argv[])
                 "  - exit()   : same\n"
                 "  - log(x)   : printout x.toString()\n"
                 "  - wait(ms) : block qscript execution for given ms\n\n"
+                "Ctrl-Q aborts a qscript evaluation\n\n"
                 );
-    w.writeStdOut("qs> ");
-    w.setMode(QConsoleWidget::Input);
     w.show();
+
+    QTimer::singleShot(200, &qs, SLOT(REPL()));
 
     return a.exec();
 }

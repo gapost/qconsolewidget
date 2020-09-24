@@ -1,31 +1,29 @@
-#ifndef SCRIPTOBJECT_H
-#define SCRIPTOBJECT_H
+#ifndef SCRIPTSESSION_H
+#define SCRIPTSESSION_H
 
 #include <QObject>
 
-class QIODevice;
 class QTimer;
 class QScriptEngine;
 class QConsoleWidget;
 
-class ScriptObject : public QObject
+class ScriptSession : public QObject
 {
     Q_OBJECT
 public:
-    explicit ScriptObject(QConsoleWidget *w);
+    explicit ScriptSession(QConsoleWidget *w);
 
-    QTimer* waitTimer() { return waitTimer_; }
     QConsoleWidget* widget() { return w; }
 
 public slots:
-    void evalCommand();
+    void REPL();
+
+private slots:
     void abortEvaluation();
 
 private:
-    QTimer* waitTimer_;
     QConsoleWidget* w;
     QScriptEngine* e;
-    QString multilineCode_;
 };
 
-#endif // SCIPTOBJECT_H
+#endif // SCRIPTSESSION_H

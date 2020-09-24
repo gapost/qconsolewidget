@@ -14,9 +14,9 @@ TARGET = scriptconsole
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-    scriptobject.cpp
+SOURCES += main.cpp \
+    scriptsession.cpp
 
 HEADERS  += \
-    scriptobject.h
+    scriptsession.h
 
