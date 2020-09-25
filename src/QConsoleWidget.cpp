@@ -463,3 +463,29 @@ int QConsoleWidget::QConsoleHistory::indexOf(bool dir, int from) const
     return to;
 }
 
+QTextStream &waitForInput(QTextStream &s)
+{
+    QConsoleIODevice* d = qobject_cast<QConsoleIODevice*>(s.device());
+    if (d) d->waitForReadyRead(-1);
+    return s;
+}
+
+QTextStream &inputMode(QTextStream &s)
+{
+    QConsoleIODevice* d = qobject_cast<QConsoleIODevice*>(s.device());
+    if (d && d->widget()) d->widget()->setMode(QConsoleWidget::Input);
+    return s;
+}
+QTextStream &outChannel(QTextStream &s)
+{
+    QConsoleIODevice* d = qobject_cast<QConsoleIODevice*>(s.device());
+    if (d) d->setCurrentWriteChannel(QConsoleWidget::StandardOutput);
+    return s;
+}
+QTextStream &errChannel(QTextStream &s)
+{
+    QConsoleIODevice* d = qobject_cast<QConsoleIODevice*>(s.device());
+    if (d) d->setCurrentWriteChannel(QConsoleWidget::StandardError);
+    return s;
+}
+

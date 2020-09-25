@@ -59,6 +59,9 @@ public slots:
   //! write to StandardError
   void writeStdErr(const QString& s);
 
+  //! write a formatted message to the console output
+  void writeOutput(const QString & message, const QTextCharFormat& fmt);
+
 signals:
   void consoleCommand(const QString& code);
   void abortEvaluation();
@@ -68,8 +71,7 @@ protected:
   //! hanle the return key press
   void handleReturnKey();
 
-  //! write a formatted message line to the console
-  void writeOutput(const QString & message, const QTextCharFormat& fmt);
+
 
   //! derived key press event
   virtual void keyPressEvent (QKeyEvent * e);
@@ -128,6 +130,11 @@ private:
   QCompleter* _completer;
 
 };
+
+QTextStream &waitForInput(QTextStream &s);
+QTextStream &inputMode(QTextStream &s);
+QTextStream &outChannel(QTextStream &s);
+QTextStream &errChannel(QTextStream &s);
 
 
 

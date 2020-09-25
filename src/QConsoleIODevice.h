@@ -19,6 +19,8 @@ public:
     qint64 bytesAvailable() const override;
     bool waitForReadyRead(int msecs) override;
 
+    QConsoleWidget* widget() const { return widget_; }
+
 protected:
     qint64 readData(char *data, qint64 maxlen) override;
     qint64 writeData(const char *data, qint64 len) override;
