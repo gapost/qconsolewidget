@@ -7,16 +7,30 @@
 #include <QScriptValue>
 #include <QScriptValueIterator>
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QIODevice>
 
-QScriptValue quit(QScriptContext *context, QScriptEngine *engine)
+QScriptValue quitfunc(QScriptContext *context, QScriptEngine *engine)
 {
     Q_UNUSED(context);
-    Q_UNUSED(engine);
+    ScriptSession* session = qobject_cast<ScriptSession*>(engine->parent());
+    session->quit();
     qApp->quit();
     return QScriptValue(QScriptValue::UndefinedValue);
 }
-
+QScriptValue ticfunc(QScriptContext *context, QScriptEngine *engine)
+{
+    Q_UNUSED(context);
+    ScriptSession* session = qobject_cast<ScriptSession*>(engine->parent());
+    session->tic();
+    return QScriptValue(QScriptValue::UndefinedValue);
+}
+QScriptValue tocfunc(QScriptContext *context, QScriptEngine *engine)
+{
+    Q_UNUSED(context);
+    ScriptSession* session = qobject_cast<ScriptSession*>(engine->parent());
+    return QScriptValue(session->toc());
+}
 QScriptValue log(QScriptContext *context, QScriptEngine *engine)
 {
     if (context->argumentCount()!=1) {
@@ -24,9 +38,9 @@ QScriptValue log(QScriptContext *context, QScriptEngine *engine)
                             "log must be called with 1 argument\n"
                             "  Usage: log(x)");
     }
-    ScriptSession* so = qobject_cast<ScriptSession*>(engine->parent());
+    ScriptSession* session = qobject_cast<ScriptSession*>(engine->parent());
     QString msg = context->argument(0).toString() + "\n";
-    so->widget()->writeStdOut(msg.toLatin1());
+    session->widget()->writeStdOut(msg.toLatin1());
     return QScriptValue(QScriptValue::UndefinedValue);
 }
 
@@ -37,11 +51,11 @@ QScriptValue wait(QScriptContext *context, QScriptEngine *engine)
                             "wait must be called with 1 argument\n"
                             "  Usage: wait(ms)");
     }
-    ScriptSession* so = qobject_cast<ScriptSession*>(engine->parent());
+    ScriptSession* session = qobject_cast<ScriptSession*>(engine->parent());
     int msecs = context->argument(0).toUInt32();
 
     QEventLoop loop;
-    QObject::connect(so->widget(),SIGNAL(abortEvaluation()),&loop,SLOT(quit()));
+    QObject::connect(session->widget(),SIGNAL(abortEvaluation()),&loop,SLOT(quit()));
     QTimer::singleShot(msecs,&loop,SLOT(quit()));
 
     loop.exec();
@@ -49,12 +63,12 @@ QScriptValue wait(QScriptContext *context, QScriptEngine *engine)
     return QScriptValue(QScriptValue::UndefinedValue);
 }
 
-ScriptSession::ScriptSession(QConsoleWidget *aw) : QObject(), w(aw)
+ScriptSession::ScriptSession(QConsoleWidget *aw) : QObject(), w(aw), quit_(false)
 {
     e = new QScriptEngine(this);
 
     QScriptValue v;
-    v = e->newFunction(quit);
+    v = e->newFunction(quitfunc);
     e->globalObject().setProperty("quit", v);
     e->globalObject().setProperty("exit", v);
 
@@ -64,9 +78,26 @@ ScriptSession::ScriptSession(QConsoleWidget *aw) : QObject(), w(aw)
     v = e->newFunction(wait);
     e->globalObject().setProperty("wait", v);
 
+    v = e->newFunction(ticfunc);
+    e->globalObject().setProperty("tic", v);
+
+    v = e->newFunction(tocfunc);
+    e->globalObject().setProperty("toc", v);
+
     w->device()->open(QIODevice::ReadWrite);
     connect(w,SIGNAL(abortEvaluation()),this,SLOT(abortEvaluation()));
 
+    tmr_ = new QElapsedTimer();
+
+}
+
+void ScriptSession::tic()
+{
+    tmr_->start();
+}
+qreal ScriptSession::toc()
+{
+    return  1.e-6*tmr_->nsecsElapsed();
 }
 
 void ScriptSession::abortEvaluation()
@@ -77,29 +108,37 @@ void ScriptSession::abortEvaluation()
 void ScriptSession::REPL()
 {
     QIODevice* d = w->device();
-    QTextStream os(d);
+    QTextStream ws(d);
     QString multilineCode;
 
     forever {
 
-        os << (multilineCode.isEmpty() ? "qs> " : "....> ") << flush;
-        w->setMode(QConsoleWidget::Input);
-        if (!d->waitForReadyRead(-1)) break;
+        if (quit_) break;
 
-        multilineCode+= os.readAll();
+        ws << (multilineCode.isEmpty() ? "qs> " : "....> ") << flush;
 
-        if (!multilineCode.isEmpty()) {
-            if (e->canEvaluate(multilineCode)) {
+        ws >> inputMode >> waitForInput;
+
+        multilineCode += ws.readAll();
+
+        if (!multilineCode.isEmpty())
+        {
+
+            if (e->canEvaluate(multilineCode))
+            {
                 QScriptValue ret = e->evaluate(multilineCode);
                 multilineCode = "";
-                if (e->hasUncaughtException()) {
-                    d->setCurrentWriteChannel(QConsoleWidget::StandardError);
-                    if (!ret.isUndefined()) os << ret.toString();
-                    os << endl;
-                    os << e->uncaughtExceptionBacktrace().join("\n") << endl;
-                    d->setCurrentWriteChannel(QConsoleWidget::StandardOutput);
-                } else if (ret.isValid() && !ret.isUndefined()) os << ret.toString() << endl;
 
+                if (e->hasUncaughtException())
+                {
+                    ws << errChannel;
+                    if (!ret.isUndefined()) ws << ret.toString();
+                    ws << endl;
+                    ws << e->uncaughtExceptionBacktrace().join("\n") << endl;
+                    ws << outChannel;
+                }
+                else if (ret.isValid() && !ret.isUndefined())
+                    ws << ret.toString() << endl;
             }
         }
     }
