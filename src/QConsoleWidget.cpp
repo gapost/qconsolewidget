@@ -62,7 +62,9 @@ QString QConsoleWidget::getCommandLine()
   QTextCursor textCursor = this->textCursor();
   textCursor.movePosition(QTextCursor::End);
   textCursor.setPosition(inpos_,QTextCursor::KeepAnchor);
-  return textCursor.selectedText();
+  QString code = textCursor.selectedText();
+  code.replace(QChar::ParagraphSeparator,QChar::LineFeed);
+  return code;
 }
 
 void QConsoleWidget::handleReturnKey()
