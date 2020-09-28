@@ -1,14 +1,16 @@
 #include "scriptsession.h"
 #include "QConsoleWidget.h"
+#include "qscriptcompleter.h"
 
 #include <QApplication>
 #include <QEventLoop>
 #include <QScriptEngine>
 #include <QScriptValue>
-#include <QScriptValueIterator>
+
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QIODevice>
+
 
 QScriptValue quitfunc(QScriptContext *context, QScriptEngine *engine)
 {
@@ -63,8 +65,9 @@ QScriptValue wait(QScriptContext *context, QScriptEngine *engine)
     return QScriptValue(QScriptValue::UndefinedValue);
 }
 
-ScriptSession::ScriptSession(QConsoleWidget *aw) : QObject(), w(aw), quit_(false)
+ScriptSession::ScriptSession(QConsoleWidget *aw) : QObject(), w(aw)
 {
+    // Create script engine and add extra functions
     e = new QScriptEngine(this);
 
     QScriptValue v;
@@ -84,9 +87,50 @@ ScriptSession::ScriptSession(QConsoleWidget *aw) : QObject(), w(aw), quit_(false
     v = e->newFunction(tocfunc);
     e->globalObject().setProperty("toc", v);
 
+    // arrange to quit with the application
+    connect(qApp,SIGNAL(lastWindowClosed()),this,SLOT(quit()));
+
+    // Prepare QConsoleWidget
     w->device()->open(QIODevice::ReadWrite);
     connect(w,SIGNAL(abortEvaluation()),this,SLOT(abortEvaluation()));
 
+    // select a console font
+#if defined(Q_OS_MAC)
+    w->setFont(QFont("Monaco"));
+#elif defined(Q_OS_UNIX)
+    w->setFont(QFont("Monospace"));
+#elif defined(Q_OS_WIN)
+    w->setFont(QFont("Courier New"));
+#endif
+
+//    QTextCharFormat fmt = w->channelCharFormat(QConsoleWidget::StandardInput);
+//    fmt.setUnderlineStyle(QTextCharFormat::SingleUnderline);
+//    w->setChannelCharFormat(QConsoleWidget::StandardInput,fmt);
+
+    // write preample
+    w->writeStdOut(
+                "QConsoleWidget example:"
+                " interactive qscript interpreter\n\n"
+                "Additional commands:\n"
+                "  - quit()   : end program\n"
+                "  - exit()   : same\n"
+                "  - log(x)   : printout x.toString()\n"
+                "  - wait(ms) : block qscript execution for given ms\n"
+                "  - tic()    : start timer\n"
+                "  - toc()    : return elapsed ms\n\n"
+                "Ctrl-Q aborts a qscript evaluation\n\n"
+                );
+
+    // Set the completer
+    QScriptCompleter* c = new QScriptCompleter;
+    c->seScripttEngine(e);
+    w->setCompleter(c);
+    // A "." triggers the completer
+    QStringList tr;
+    tr << ".";
+    w->setCompletionTriggers(tr);
+
+    // init the internal timer for tic()/toc()
     tmr_ = new QElapsedTimer();
 
 }
@@ -100,6 +144,11 @@ qreal ScriptSession::toc()
     return  1.e-6*tmr_->nsecsElapsed();
 }
 
+void ScriptSession::quit()
+{
+    w->device()->close();
+}
+
 void ScriptSession::abortEvaluation()
 {
     e->abortEvaluation();
@@ -111,9 +160,7 @@ void ScriptSession::REPL()
     QTextStream ws(d);
     QString multilineCode;
 
-    forever {
-
-        if (quit_) break;
+    while(ws.device()->isOpen()) {
 
         ws << (multilineCode.isEmpty() ? "qs> " : "....> ") << flush;
 
@@ -144,5 +191,7 @@ void ScriptSession::REPL()
     }
 
 }
+
+
 
 

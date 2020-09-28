@@ -2,36 +2,35 @@
 #include "scriptsession.h"
 #include <QApplication>
 #include <QTimer>
+#include <QVBoxLayout>
+
+// make a wrapper for QConsoleWidget
+class MainWidget : public QWidget
+{
+public:
+    MainWidget()
+    {
+        QVBoxLayout* vl = new QVBoxLayout;
+        w_ = new QConsoleWidget(this);
+        vl->addWidget(w_);
+        vl->setMargin(1);
+        setLayout(vl);
+    }
+    QConsoleWidget* widget() const
+    { return w_; };
+private:
+    QConsoleWidget* w_;
+};
 
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    QConsoleWidget w;
-    ScriptSession qs(&w);
-
-    w.setWindowTitle("qscript console");
-#if defined(Q_OS_MAC)
-    w.setFont(QFont("Monaco"));
-#elif defined(Q_OS_UNIX)
-    w.setFont(QFont("Monospace"));
-#elif defined(Q_OS_WIN)
-    w.setFont(QFont("Courier New"));
-#endif
-    w.writeStdOut(
-                "QConsoleWidget example:"
-                " interactive qscript interpreter\n\n"
-                "Additional commands:\n"
-                "  - quit()   : end program\n"
-                "  - exit()   : same\n"
-                "  - log(x)   : printout x.toString()\n"
-                "  - wait(ms) : block qscript execution for given ms\n"
-                "  - tic()    : start timer\n"
-                "  - toc()    : return elapsed ms\n\n"
-                "Ctrl-Q aborts a qscript evaluation\n\n"
-                );
-    w.show();
+    MainWidget W;
+    W.setWindowTitle("qscript console");
+    ScriptSession qs(W.widget());
+    W.show();
 
     QTimer::singleShot(200, &qs, SLOT(REPL()));
 
