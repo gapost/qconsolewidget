@@ -7,7 +7,7 @@ It can be used as an interactive scripting terminal or a log window.
 Features include standard console-like editing, command history, 
 formatted input, output & error streams.
 
-TODO: tab completion, syntax highlighting
+TODO: syntax highlighting
 
 ## Usage
 
@@ -20,7 +20,7 @@ w.writeStdOut("enter command> ");
 w.setMode(QConsoleWidget::Input);
 QObject::connect(&w,SIGNAL(consoleCommand(QString)),MyQObject,SLOT(evalCommand(QString)))
 ...
-MyQObjet::evalCommand(const QString code)
+MyQObjet::evalCommand(const QString& code)
 {
     ...
 }
