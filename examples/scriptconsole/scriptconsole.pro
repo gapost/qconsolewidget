@@ -15,8 +15,10 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp \
-    scriptsession.cpp
+    scriptsession.cpp \
+    qscriptcompleter.cpp
 
 HEADERS  += \
-    scriptsession.h
+    scriptsession.h \
+    qscriptcompleter.h
 
