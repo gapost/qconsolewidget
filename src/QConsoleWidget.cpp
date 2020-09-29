@@ -115,7 +115,6 @@ void QConsoleWidget::handleTabKey()
           insertCompletion(completer_->currentCompletion());
           completer_->popup()->hide();
       }
-      //selectCompletion();
     }
 }
 
@@ -156,41 +155,36 @@ void QConsoleWidget::updateCompleter()
         qDebug() << "no completions - hiding";
       completer_->popup()->hide();
     }
-
 }
 
-void QConsoleWidget::checkCompletionTriggers()
+void QConsoleWidget::checkCompletionTriggers(const QString &txt)
 {
-    if (!completer_ || completion_triggers_.isEmpty()) return;
+    if (!completer_ || completion_triggers_.isEmpty() || txt.isEmpty()) return;
 
     QTextCursor tc = this->textCursor();
     foreach(const QString& tr, completion_triggers_)
     {
-        QTextCursor tc1(tc);
-        tc1.movePosition(QTextCursor::Left,QTextCursor::KeepAnchor,tr.length());
-        if (tc1.selectedText()==tr) {
-            updateCompleter();
-            return;
+        if (tr.endsWith(txt))
+        {
+            QTextCursor tc = this->textCursor();
+            tc.movePosition(QTextCursor::Left,QTextCursor::KeepAnchor,tr.length());
+            if (tc.selectedText()==tr) {
+                updateCompleter();
+                return;
+            }
         }
     }
 }
 
 void QConsoleWidget::insertCompletion(const QString& completion)
 {
-  QTextCursor tc = textCursor();
-  tc.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor);
-  if (tc.selectedText() == ".")
-  {
-    tc.insertText(QString(".") + completion);
-  }
-  else
-  {
-    tc = textCursor();
-    tc.movePosition(QTextCursor::StartOfWord, QTextCursor::MoveAnchor);
-    tc.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
-    tc.insertText(completion);
+    int p = completer_->insertPos();
+
+    QTextCursor tc = textCursor();
+    int m = tc.position() - inpos_ - p;
+    tc.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, m);
+    tc.insertText(completion,chanFormat_[StandardInput]);
     setTextCursor(tc);
-  }
 }
 
 void QConsoleWidget::setCompleter(QConsoleWidgetCompleter *c)
@@ -382,10 +376,10 @@ void QConsoleWidget::keyPressEvent(QKeyEvent* e)
         e->accept();
         setCurrentCharFormat(chanFormat_[StandardInput]);
         QPlainTextEdit::keyPressEvent(e);
+        // check if the last key triggers a completion
+        checkCompletionTriggers(e->text());
         break;
-
     }
-
 
     if (completer_ && completer_->popup()->isVisible())
     {
@@ -394,16 +388,26 @@ void QConsoleWidget::keyPressEvent(QKeyEvent* e)
             completer_->popup()->hide();
         else
             updateCompleter();
-    } else checkCompletionTriggers(); // check if a completion trigger is active
+    }
 }
 
-void QConsoleWidget::cut() {
-  if (isSelectionInEditZone()) {
-    QPlainTextEdit::cut();
-  }
+void QConsoleWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu *menu = createStandardContextMenu();
+
+    QAction* a;
+    if ((a = menu->findChild<QAction*>("edit-cut")))
+        a->setEnabled(canCut());
+    if ((a = menu->findChild<QAction*>("edit-delete")))
+        a->setEnabled(canCut());
+    if ((a = menu->findChild<QAction*>("edit-paste")))
+        a->setEnabled(canPaste());
+
+    menu->exec(event->globalPos());
+    delete menu;
 }
 
-bool QConsoleWidget::isSelectionInEditZone()
+bool QConsoleWidget::isSelectionInEditZone() const
 {
     QTextCursor textCursor = this->textCursor();
     if (!textCursor.hasSelection()) return false;
@@ -415,9 +419,17 @@ bool QConsoleWidget::isSelectionInEditZone()
 }
 
 
-bool QConsoleWidget::isCursorInEditZone()
+bool QConsoleWidget::isCursorInEditZone() const
 {
     return textCursor().position()>=inpos_;
+}
+
+bool QConsoleWidget::canPaste() const
+{
+    QTextCursor textCursor = this->textCursor();
+    if (textCursor.position()<inpos_) return false;
+    if (textCursor.anchor()<inpos_) return false;
+    return true;
 }
 
 
