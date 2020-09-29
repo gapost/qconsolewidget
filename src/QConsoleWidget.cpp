@@ -16,9 +16,9 @@
 #include <QMimeData>
 
 QConsoleWidget::QConsoleWidget(QWidget* parent)
-: QPlainTextEdit(parent), _mode(Output), completer_(0)
+: QPlainTextEdit(parent), mode_(Output), completer_(0)
 {
-    _iodevice = new QConsoleIODevice(this,this);
+    iodevice_ = new QConsoleIODevice(this,this);
 
     QTextCharFormat fmt = currentCharFormat();
     for(int i=0; i<nConsoleChannels; i++)
@@ -37,7 +37,7 @@ QConsoleWidget::~QConsoleWidget()
 
 void QConsoleWidget::setMode(ConsoleMode m)
 {
-    if (m==_mode) return;
+    if (m==mode_) return;
 
     if (m==Input) {
         QTextCursor cursor = textCursor();
@@ -45,18 +45,18 @@ void QConsoleWidget::setMode(ConsoleMode m)
         setTextCursor(cursor);
         setCurrentCharFormat(chanFormat_[StandardInput]);
         inpos_ = cursor.position();
-        _mode = Input;
+        mode_ = Input;
     }
 
     if (m==Output) {
-        _mode = Output;
+        mode_ = Output;
     }
 
 }
 
 QString QConsoleWidget::getCommandLine()
 {
-    if (_mode==Output) return QString();
+    if (mode_==Output) return QString();
 
     // select text in edit zone (from the input pos to the end)
   QTextCursor textCursor = this->textCursor();
@@ -81,13 +81,13 @@ void QConsoleWidget::handleReturnKey()
     setTextCursor(textCursor);
 
     // Update the history
-    if (!code.isEmpty()) _history.add(code);
+    if (!code.isEmpty()) history_.add(code);
 
     // append the newline char and
     // send signal / update iodevice
     code += "\n";
-    if (_iodevice->isOpen())
-        _iodevice->consoleWidgetInput(code);
+    if (iodevice_->isOpen())
+        iodevice_->consoleWidgetInput(code);
     else {
         emit consoleCommand(code);
     }
@@ -284,8 +284,8 @@ void QConsoleWidget::keyPressEvent(QKeyEvent* e)
     int key = e->key();
     int shiftMod = e->modifiers() == Qt::ShiftModifier;
 
-    if (_history.isActive() && key!=Qt::Key_Up && key!=Qt::Key_Down)
-        _history.deactivate();
+    if (history_.isActive() && key!=Qt::Key_Up && key!=Qt::Key_Down)
+        history_.deactivate();
 
     // Force the cursor back to the interactive area
     // for all keys except modifiers
@@ -302,16 +302,16 @@ void QConsoleWidget::keyPressEvent(QKeyEvent* e)
     {
     case Qt::Key_Up:
         // Activate the history and move to the 1st matching history item
-        if (!_history.isActive()) _history.activate(getCommandLine());
-        if (_history.move(true))
-            replaceCommandLine(_history.currentValue());
+        if (!history_.isActive()) history_.activate(getCommandLine());
+        if (history_.move(true))
+            replaceCommandLine(history_.currentValue());
         else QApplication::beep();
         e->accept();
         break;
 
     case Qt::Key_Down:
-        if (_history.move(false))
-            replaceCommandLine(_history.currentValue());
+        if (history_.move(false))
+            replaceCommandLine(history_.currentValue());
         else QApplication::beep();
         e->accept();
 
@@ -523,7 +523,7 @@ void QConsoleWidget::writeStdErr(const QString& s)
 
 #define HISTORY_FILE ".command_history.lst"
 
-QConsoleWidget::History QConsoleWidget::_history;
+QConsoleWidget::History QConsoleWidget::history_;
 
 QConsoleWidget::History::History(void) : pos_(0), active_(false), maxsize_(10000)
 {

@@ -19,17 +19,11 @@ QConsoleIODevice::~QConsoleIODevice()
 {
 }
 
-/*!
-    \reimp
-*/
 qint64 QConsoleIODevice::bytesAvailable() const
 {
     return (qint64)(readbuff_.size() - readpos_);
 }
 
-/*!
-    \reimp
-*/
 bool QConsoleIODevice::waitForReadyRead(int msecs)
 {
     if (!widget_->device()->isOpen() ||  widget_->mode()!=QConsoleWidget::Input)
@@ -51,9 +45,6 @@ bool QConsoleIODevice::waitForReadyRead(int msecs)
 
 }
 
-/*!
-    \reimp
-*/
 qint64 QConsoleIODevice::readData(char *data, qint64 len)
 {
     int b = bytesAvailable();
@@ -64,9 +55,7 @@ qint64 QConsoleIODevice::readData(char *data, qint64 len)
     }
     return (qint64)b;
 }
-/*!
-    \reimp
-*/
+
 qint64 QConsoleIODevice::writeData(const char *data, qint64 len)
 {
     QByteArray ba(data,(int)len);

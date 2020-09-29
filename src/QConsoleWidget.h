@@ -30,77 +30,63 @@ public:
     QConsoleWidget(QWidget* parent = 0);
     ~QConsoleWidget();
 
-    ConsoleMode mode() const { return _mode; }
+    ConsoleMode mode() const { return mode_; }
     void setMode(ConsoleMode m);
-
-    QIODevice* device() const { return (QIODevice*)_iodevice; }
-
+    QIODevice* device() const { return (QIODevice*)iodevice_; }
     QTextCharFormat channelCharFormat(ConsoleChannel ch) const
     { return chanFormat_[ch]; }
     void setChannelCharFormat(ConsoleChannel ch, const QTextCharFormat& fmt)
     { chanFormat_[ch] = fmt; }
-
     const QStringList& completionTriggers() const
     { return completion_triggers_; }
     void setCompletionTriggers(const QStringList& l)
     { completion_triggers_ = l; }
-
     virtual QSize	sizeHint() const
     { return QSize(600,400); }
-
-    //! write a formatted message to the console
+    // write a formatted message to the console
     void write(const QString & message, const QTextCharFormat& fmt);
-
     static const QStringList& history()
-    { return _history.strings_; }
-
+    { return history_.strings_; }
     void setCompleter(QConsoleWidgetCompleter* c);
+    // get the current command line
+    QString getCommandLine();
 
 public slots:
 
-    //! write to StandardOutput
+    // write to StandardOutput
     void writeStdOut(const QString& s);
-
-    //! write to StandardError
+    // write to StandardError
     void writeStdErr(const QString& s);
 
 signals:
-    void consoleCommand(const QString& code);
-    void abortEvaluation();
 
+    // fired when user hits the return key
+    void consoleCommand(const QString& code);
+    // fired when user enters a Ctrl-Q
+    void abortEvaluation();
 
 protected:
 
     bool canPaste() const;
     bool canCut() const
     { return isSelectionInEditZone(); }
-
-    //! hanle the return key press
     void handleReturnKey();
-
     void handleTabKey();
-
     void updateCompleter();
-
     void checkCompletionTriggers(const QString& txt);
-
-    //! derived key press event
+    // reimp QPlainTextEdit functions
     void keyPressEvent (QKeyEvent * e) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
-
-    //! Returns true if selection is in edit zone
+    // Returns true if there is a selection in edit zone
     bool isSelectionInEditZone() const;
-
-    //! Returns true if cursor is in edit zone
+    // Returns true if cursor is in edit zone
     bool isCursorInEditZone() const;
-
-    //! replace the command line
+    // replace the command line
     void replaceCommandLine(const QString& str);
 
-    //! get the current command line
-    QString getCommandLine();
-
 protected slots:
+
+    // insert the completion from completer
     void insertCompletion(const QString& completion);
 
 private:
@@ -124,20 +110,14 @@ private:
         int indexOf(bool dir, int from) const;
     };
 
-    static History _history;
-
-    ConsoleMode _mode;
+    static History history_;
+    ConsoleMode mode_;
     int inpos_, completion_pos_;
     QStringList completion_triggers_;
-
-    QString _currentMultiLineCode;
-
-    QConsoleIODevice* _iodevice;
-
+    QString currentMultiLineCode_;
+    QConsoleIODevice* iodevice_;
     QTextCharFormat chanFormat_[nConsoleChannels];
-
     QConsoleWidgetCompleter* completer_;
-
 };
 
 QTextStream &waitForInput(QTextStream &s);
@@ -148,15 +128,19 @@ QTextStream &errChannel(QTextStream &s);
 class QConsoleWidgetCompleter : public QCompleter
 {
 public:
-    /**
-  * Update the completion model given a string.  The given string
-  * is the current console text between the cursor and the start of
-  * the line.
-  *
-  * Return the completion count
-  */
+    /*
+     * Update the completion model given a string.  The given string
+     * is the current console text between the cursor and the start of
+     * the line.
+     *
+     * Return the completion count
+     */
     virtual int updateCompletionModel(const QString& str) = 0;
 
+    /*
+     * Return the position in the command line where the completion
+     * should be inserted
+     */
     virtual int insertPos() = 0;
 };
 

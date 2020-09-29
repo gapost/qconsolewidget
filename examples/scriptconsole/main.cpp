@@ -17,7 +17,7 @@ public:
         setLayout(vl);
     }
     QConsoleWidget* widget() const
-    { return w_; };
+    { return w_; }
 private:
     QConsoleWidget* w_;
 };
