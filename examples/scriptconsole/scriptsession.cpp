@@ -58,7 +58,7 @@ QScriptValue wait(QScriptContext *context, QScriptEngine *engine)
 
     QEventLoop loop;
     QObject::connect(session->widget(),SIGNAL(abortEvaluation()),&loop,SLOT(quit()));
-    QTimer::singleShot(msecs,&loop,SLOT(quit()));
+    QTimer::singleShot(msecs,Qt::PreciseTimer,&loop,SLOT(quit()));
 
     loop.exec();
 
