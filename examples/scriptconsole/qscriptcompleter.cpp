@@ -9,35 +9,35 @@
 QScriptCompleter::QScriptCompleter()
 {
     // https://developer.mozilla.org/en/JavaScript/Reference/Reserved_Words
-    m_keywords << "break";
-    m_keywords << "case";
-    m_keywords << "catch";
-    m_keywords << "continue";
-    m_keywords << "default";
-    m_keywords << "delete";
-    m_keywords << "do";
-    m_keywords << "else";
-    m_keywords << "finally";
-    m_keywords << "for";
-    m_keywords << "function";
-    m_keywords << "if";
-    m_keywords << "in";
-    m_keywords << "instanceof";
-    m_keywords << "new";
-    m_keywords << "return";
-    m_keywords << "switch";
-    m_keywords << "this";
-    m_keywords << "throw";
-    m_keywords << "try";
-    m_keywords << "typeof";
-    m_keywords << "var";
-    m_keywords << "void";
-    m_keywords << "while";
-    m_keywords << "with";
+    js_keywords_ << "break";
+    js_keywords_ << "case";
+    js_keywords_ << "catch";
+    js_keywords_ << "continue";
+    js_keywords_ << "default";
+    js_keywords_ << "delete";
+    js_keywords_ << "do";
+    js_keywords_ << "else";
+    js_keywords_ << "finally";
+    js_keywords_ << "for";
+    js_keywords_ << "function";
+    js_keywords_ << "if";
+    js_keywords_ << "in";
+    js_keywords_ << "instanceof";
+    js_keywords_ << "new";
+    js_keywords_ << "return";
+    js_keywords_ << "switch";
+    js_keywords_ << "this";
+    js_keywords_ << "throw";
+    js_keywords_ << "try";
+    js_keywords_ << "typeof";
+    js_keywords_ << "var";
+    js_keywords_ << "void";
+    js_keywords_ << "while";
+    js_keywords_ << "with";
 
-    m_keywords << "true";
-    m_keywords << "false";
-    m_keywords << "null";
+    js_keywords_ << "true";
+    js_keywords_ << "false";
+    js_keywords_ << "null";
 }
 
 int QScriptCompleter::updateCompletionModel(const QString& code)
@@ -53,17 +53,18 @@ int QScriptCompleter::updateCompletionModel(const QString& code)
 
     // Search backward through the string for usable characters
     QString textToComplete;
-    for (int i = code.length() - 1; i >= 0; --i)
+    for(int i=code.length()-1; i>=0; i--)
     {
-      QChar c = code.at(i);
-      if (c.isLetterOrNumber() || c == '.' || c == '_')
-      {
-        textToComplete.prepend(c);
-      }
-      else
-      {
-        break;
-      }
+        QChar c = code.at(i);
+        if (c.isLetterOrNumber() || c == '.' || c == '_')
+        {
+            textToComplete.prepend(c);
+            insert_pos_ = i;
+        }
+        else
+        {
+            break;
+        }
     }
 
     // Split the string at the last dot, if one exists
@@ -74,6 +75,7 @@ int QScriptCompleter::updateCompletionModel(const QString& code)
     {
       lookup = compareText.mid(0, dot);
       compareText = compareText.mid(dot + 1);
+      insert_pos_ += (dot+1);
     }
 
     // Lookup QtScript names
@@ -87,6 +89,7 @@ int QScriptCompleter::updateCompletionModel(const QString& code)
     }
     qDebug() << "lookup : " << lookup;
     qDebug() << "compareText : " << compareText;
+    qDebug() << "insert pos : " << insert_pos_;
     qDebug() << "found : " << found.size();
 
     // Initialize the completion model
@@ -112,7 +115,7 @@ QStringList QScriptCompleter::introspection(const QString &lookup)
 
     QScriptValue scriptObj;
     if (lookup.isEmpty()) {
-        properties = m_keywords;
+        properties = js_keywords_;
         scriptObj = eng->globalObject();
     }
     else {

@@ -9,7 +9,9 @@ class QScriptCompleter : public QConsoleWidgetCompleter
 {
 public:
     QScriptCompleter();
-    virtual int updateCompletionModel(const QString& code);
+    int updateCompletionModel(const QString& code) override;
+    int insertPos() override
+    { return insert_pos_; }
 
     void seScripttEngine(QScriptEngine* e)
     { eng = e; }
@@ -17,7 +19,8 @@ public:
 private:
     QStringList introspection(const QString& lookup);
     QScriptEngine* eng;
-    QStringList m_keywords;
+    QStringList js_keywords_;
+    int insert_pos_;
 };
 
 #endif // QSCRIPTCOMPLETER_H
