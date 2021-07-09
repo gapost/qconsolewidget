@@ -87,10 +87,13 @@ int QScriptCompleter::updateCompletionModel(const QString& code)
       foreach (QString n, l)
         if (n.toLower().startsWith(compareText)) found << n;
     }
+
+    /*
     qDebug() << "lookup : " << lookup;
     qDebug() << "compareText : " << compareText;
     qDebug() << "insert pos : " << insert_pos_;
     qDebug() << "found : " << found.size();
+    */
 
     // Initialize the completion model
     if (!found.isEmpty())
