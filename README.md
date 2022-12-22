@@ -1,5 +1,7 @@
 # QConsoleWidget
 
+> part of **QDaq** (https://gitlab.com/qdaq/qdaq) - Qt-based Data Acquisition
+
 A lightweight Qt5 console widget based on QPlainTextEdit providing 
 also a QIODevice interface.
 
